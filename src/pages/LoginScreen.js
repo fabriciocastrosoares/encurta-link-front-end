@@ -1,22 +1,35 @@
 import styled from "styled-components";
 import MyLogo from "../components/Logo";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useContext, useState } from "react";
+import apiAuth from "../services/apiAuth";
+import { UserContext } from "../contexts/UserContext";
 
 
 export default function LoginScreen(){
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const {setName, setToken} = useContext(UserContext);
+    const navigate = useNavigate();
+
 
     function handleLogin(e) {
-        e.preventDefault(); // Impede que a página recarregue ao enviar o form
+        e.preventDefault();
         
-        // Objeto com os dados do formulário
-        const loginData = { email, password };
-        alert(`Tentando fazer login com:\nEmail: ${loginData.email}\nSenha: ${loginData.password}`);
+        const body = { email, password };
 
-        // Próximo passo: enviar 'loginData' para a API com Axios
-    }
+        apiAuth.login(body)
+          .then(res =>{
+            setName(res.data.name);
+            setToken(res.data.token);
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("name", res.data.name);
+            navigate("/main-screen")
+          })
+          .catch(err => {
+                alert(err);
+          })
+    };
 
     return (
           <Screen>
@@ -30,20 +43,22 @@ export default function LoginScreen(){
                     placeholder="E-mail"
                     type="email"
                     autoComplete="username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     required 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    
                 />
                 <input
                     placeholder="Senha"
                     type="password"
                     autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={3}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    
                 />
-                <button >Entrar</button>
+                <button type = "submit">Entrar</button>
             </form>
         </Screen>
     );

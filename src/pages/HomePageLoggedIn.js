@@ -1,40 +1,56 @@
 import styled from "styled-components";
 import MyLogo from "../components/Logo";
 import { FaTrophy } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { UserContext } from "../contexts/UserContext";
+import apiRankings from "../services/apiRankings";
+import apiAuth from "../services/apiAuth";
 
 export default function HomePageLoggedIn() {
-    
-    const rankingData = [
-        {
-            id: 1,
-            name: "Fulaninha",
-            links: 32,
-            views: "1.703.584"
-        },
-        {
-            id: 2,
-            name: "Ciclano",
-            links: 20,
-            views: "1.113.347"
-        },
-        {
-            id: 3,
-            name: "Beltrana",
-            links: 18,
-            views: "852.961"
-        }
-        
-    ];
+    const { name, setName, token, setToken } = useContext(UserContext);
+
+    const [rankingData, setRankingData] = useState([]);
+    const navigate = useNavigate();
+
+        function handleLogout() {
+        apiAuth.logout(token)
+            .then(() => {
+                setName(undefined);
+                setToken(undefined);
+                localStorage.clear();
+                navigate("/")
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
+
+
+    useEffect(() => {
+        loadRankings();
+    }, []);
+
+    function loadRankings() {
+        apiRankings.getRanking()
+            .then(res => {
+                setRankingData(res.data);
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
+
 
     return (
         <Screen>
             <TopUser>
-               <StyledLink to="/login" $primary={true}>Seja bem-vindo(a), Pessoa!</StyledLink> 
+                <p>Seja bem-vindo(a), {name}!</p>
             </TopUser>
             <Topo>
-                <StyledLink to="/login-screen">Entrar</StyledLink>
-                <StyledLink to="/registration-screen" $primary={false}>Cadastre-se</StyledLink>
+                <StyledLink to="/main-screen">Home</StyledLink>
+                <StyledLink to="/logged-in">Ranking</StyledLink>
+                <StyledLink onClick = {handleLogout}>Sair</StyledLink>
             </Topo>
             <MyLogo />
             <Ranking>
@@ -43,16 +59,11 @@ export default function HomePageLoggedIn() {
             </Ranking>
             <ContainerRanking>
                 <ol>
-                    {rankingData.map((user, index) => (
-                        <li key={user.id}>{`${index + 1}. ${user.name} - ${user.links} links - ${user.views} visualizações`}</li>
+                    {rankingData.map((r) => (
+                        <li key={r.id}>{`${r.id}. ${r.name} - ${r.linksCount} links - ${r.visitCount} visualizações`}</li>
                     ))}
                 </ol>
             </ContainerRanking>
-            <Link to="/registration-screen" style={{ textDecoration: 'none' }}>
-                <CrieSuaConta>
-                    Crie sua conta para usar nosso serviço!
-                </CrieSuaConta>
-            </Link>
         </Screen>
     );
 };
@@ -67,9 +78,10 @@ const Screen = styled.div`
 `;
 
 const StyledLink = styled(Link)`
-  color: ${props => props.$primary === false ? '#9C9C9C' : '#5D9040'};
+  color: ${props => props.$primary ? '#5D9040' : '#9C9C9C'};
   cursor: pointer;
   text-decoration: none;
+  font-weight: ${props => props.$primary ? '700' : '400'};
 `;
 
 const Topo = styled.div`
@@ -131,25 +143,14 @@ const ContainerRanking = styled.div`
     }
 `;
 
-const CrieSuaConta = styled.h1`
-    width: 728px;
-    height: 45px;
-    font-family: "Lexend Deca", sans-serif;
-    font-size: 36px;
-    font-weight: 700;
-    color: black;
-    margin-top: 82px;
-    text-align: center;
-`;
-
 const TopUser = styled.div`
     font-family: "Lexend Deca", sans-serif;
     font-size: 14px;
     font-weight: 400;
     width: auto;
+    color: #5D9040;
     position: fixed;
     left: 171px;
     top: 69px;
     white-space: nowrap;
-
 `;

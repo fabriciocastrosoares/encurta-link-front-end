@@ -2,30 +2,25 @@ import styled from "styled-components";
 import MyLogo from "../components/Logo";
 import { FaTrophy } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import apiRankings from "../services/apiRankings";
 
 export default function HomePage() {
-    
-    const rankingData = [
-        {
-            id: 1,
-            name: "Fulaninha",
-            links: 32,
-            views: "1.703.584"
-        },
-        {
-            id: 2,
-            name: "Ciclano",
-            links: 20,
-            views: "1.113.347"
-        },
-        {
-            id: 3,
-            name: "Beltrana",
-            links: 18,
-            views: "852.961"
-        }
-        
-    ];
+    const [rankingData, setRankingData] = useState([]);
+
+    useEffect(() => {
+        loadRankings();
+    }, []);
+
+    function loadRankings() {
+        apiRankings.getRanking()
+            .then(res => {
+                setRankingData(res.data);
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
 
     return (
         <Screen>
@@ -40,8 +35,8 @@ export default function HomePage() {
             </Ranking>
             <ContainerRanking>
                 <ol>
-                    {rankingData.map((user, index) => (
-                        <li key={user.id}>{`${index + 1}. ${user.name} - ${user.links} links - ${user.views} visualizações`}</li>
+                    {rankingData.map((r) => (
+                        <li key={r.id}>{`${r.id}. ${r.name} - ${r.linksCount} links - ${r.visitCount} visualizações`}</li>
                     ))}
                 </ol>
             </ContainerRanking>

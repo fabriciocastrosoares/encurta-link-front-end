@@ -1,72 +1,114 @@
 import styled from "styled-components";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import MyLogo from "../components/Logo";
 import { FaTrashAlt } from "react-icons/fa";
+import { UserContext } from "../contexts/UserContext";
+import apiAuth from "../services/apiAuth";
+import apiUsers from "../services/apiUsers";
+import apiUrls from "../services/apiUrls";
 
-export default function MainScreen(){
-    
-    const initialLinks = [
-        {
-            id: 1,
-            url: "https://www.driven.com.br",
-            shortUrl: "e4231A",
-            visitCount: 271
-        },
-        {
-            id: 2,
-            url: "https://www.google.com",
-            shortUrl: "f5678B",
-            visitCount: 1024
-        },
-        {
-            id: 3,
-            url: "https://www.github.com",
-            shortUrl: "g9012C",
-            visitCount: 512
-        }
-    ];
+export default function MainScreen() {
+    const navigate = useNavigate();
+    const { name, setName } = useContext(UserContext);
+    const { token, setToken } = useContext(UserContext);
+    const [linksUserData, setLinksUserData] = useState([]);
+    const [url, setUrl] = useState("");
 
-    const [userLinks, setUserLinks] = useState(initialLinks);
-    const [urlToShorten, setUrlToShorten] = useState("");
+    function handleLogout() {
+        apiAuth.logout(token)
+            .then(() => {
+                setName(undefined);
+                setToken(undefined);
+                localStorage.clear();
+                navigate("/")
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
+
+    useEffect(() => {
+        loadLinks();
+    }, []);
+
+    function loadLinks() {
+        apiUsers.getUser(token)
+            .then(res => {
+                setLinksUserData(res.data.shortenedUrls);
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
+
 
     function handleSubmit(e) {
-        e.preventDefault(); // Impede o recarregamento da página
-        alert(`URL para encurtar: ${urlToShorten}`);
-        // Aqui virá a lógica para chamar a API e adicionar o novo link na lista
-    }
+        e.preventDefault();
+
+        const body = { url };
+
+        apiUrls.createShortUrl(token, body)
+            .then(res => {
+                setUrl("");
+                loadLinks();
+            })
+            .catch(err => {
+                alert(err.response.data);
+            })
+    };
+
+    function deleteUrl(id){
+        const confirm = window.confirm("Tem certeza que deseja apagar essa transação?");
+
+        if(confirm){
+            apiUrls.deleteUrlById(token, id)
+                .then(res => {
+                    alert("Link apagado com sucesso! ✅");
+                    loadLinks();
+                })
+                 .catch(err => {
+          alert(err.response.data);
+        });
+        };
+    };
+
+    function loadLink(shortUrl) {
+        window.open(`${process.env.REACT_APP_API_URL}/urls/open/${shortUrl}`, '_blank');
+    };
+
 
     return (
         <HomeScreen>
             <TopUser>
-               <StyledLink to="/login" $primary={false}>Seja bem-vindo(a), Pessoa!</StyledLink> 
+                <p>Seja bem-vindo(a), {name}!</p>
             </TopUser>
-             <Top>
-                <StyledLink to="/login">Home</StyledLink>
-                <StyledLink to="/cadastro" >Ranking</StyledLink>
-                <StyledLink to="/login">Sair</StyledLink>
+            <Top>
+                <StyledLink to="/main-screen">Home</StyledLink>
+                <StyledLink to="/logged-in">Ranking</StyledLink>
+                <LogoutLink onClick={handleLogout}>Sair</LogoutLink>
             </Top>
             <MyLogo />
-             <InsertLink>
+            <InsertLink>
                 <form onSubmit={handleSubmit}>
                     <input
-                        placeholder = "Links que cabem no bolso" 
-                        type = "url"
-                        value={urlToShorten}
-                        onChange={(e) => setUrlToShorten(e.target.value)}
+                        placeholder="Links que cabem no bolso"
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
                         required
                     />
-                    <button>Encurtar link</button>
+                    <button type="submit">Encurtar link</button>
                 </form>
-                <DisplayLinks>
-                    {userLinks.map(link => (
-                        <LineLink key={link.id}>
-                            <Text>
-                                <p>{link.url}</p>
-                                <p>{link.shortUrl}</p>
-                                <p>Quantidade de visitantes: {link.visitCount}</p>
+                <DisplayLinks >
+                    {linksUserData.map(l => (
+                        <LineLink key={l.id}>
+                            <Text onClick={() => { loadLink(l.shortUrl) }}>
+                                <p>{l.url}</p>
+                                <p>{l.shortUrl}</p>
+                                <p>Quantidade de visitantes: {l.visitCount}</p>
                             </Text>
-                            <DivTrash>
+                            <DivTrash onClick={(e) => { e.stopPropagation(); deleteUrl(l.id); }}>
                                 <Trash />
                             </DivTrash>
                         </LineLink>
@@ -90,6 +132,7 @@ const TopUser = styled.div`
     font-size: 14px;
     font-weight: 400;
     width: auto;
+    color: #5D9040;
     position: fixed;
     left: 171px;
     top: 69px;
@@ -100,6 +143,12 @@ const StyledLink = styled(Link)`
     color: ${props => props.$primary === false ? '#5D9040' : '#9C9C9C'};
     cursor: pointer;
     text-decoration: none;
+`;
+
+const LogoutLink = styled.span`
+    color: #9C9C9C;
+    cursor: pointer;
+    text-decoration: underline;
 `;
 
 const Top = styled.div`
@@ -164,7 +213,6 @@ const DisplayLinks = styled.div`
     flex-direction: column;
     margin-top: 58px;
     gap: 40px;
-
 `;
 
 const Text = styled.div`
@@ -181,6 +229,7 @@ const Text = styled.div`
     border-radius: 12px 0 0 12px;
     padding: 21px 94px 21px 21px;
     box-shadow: 0px 4px 24px 0px #78B1591F;
+    cursor: pointer;
 `;
 
 const LineLink = styled.div`
